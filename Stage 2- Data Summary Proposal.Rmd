@@ -16,15 +16,26 @@ knitr::opts_chunk$set(echo = TRUE, highlight=FALSE, comment=NA, warnings=FALSE,m
 
 ```{r, echo=FALSE, warning=FALSE,results=FALSE}
 ## Use this chunk for reading in packages.
+library(car)
+library(corrplot)
+library(Hmisc)
+library(olsrr)
+library(MASS)
+library(glmtoolbox)
+library(ggplot2)
+library(blorr)
 ## Use this chunk for reading in the data, combining the data, and any other major data cleaning that is not relevant to show.
+RedZone <- read.csv("https://raw.githubusercontent.com/pyuio/STAT-3220-Final-Project/refs/heads/main/nfl_2025_redzone_q4.csv", header = T)
+names(RedZone)
+head(RedZone)
 ## Remove the ## before all code.
 ```
-
-
 
 \newpage
 
 ## Introduction
+
+We will be studying 2025 NFL 4th Quarter Red Zone offenses by creating a logistic regression model that predicts the probability of the pass. This is a particularly interesting topic because the NFL has experienced recent change when it comes to Red Zone offensive success. According to Sports Info Solutions, Red Zone success rate hit a ten year low in 2024. This was primarily caused by a historically low Red Zone Passing success rate, as rushing success rates have remained mostly stable over the last ten years. We suspect that this trend may have changed play calling decisions during the 2025 season. Furthermore, in retrospect the NFL did indeed see general changes in play calling during the 2025 season. Teams shifted towards heavier sets (12+ personnel), with the Seahawks, the eventual Super Bowl Champions, and Rams, the NFC runners-up, leading the charge (ESPN). 13 personnel specifically experienced the most growth in 2025 (PFF). This is particularly interesting, however, as the actual efficiency, by EPA, of the formation did not increase from 2024 to 2025 (Sharp Football Analysis). These trends indicate the importance of personnel is predicting the pre-snap probability of the snap.
 
 ## Data Summary
 
@@ -33,9 +44,8 @@ knitr::opts_chunk$set(echo = TRUE, highlight=FALSE, comment=NA, warnings=FALSE,m
 ### EDA Summary
 
 ```{r, echo=FALSE, warning=FALSE,results=FALSE}
-## Use this code chunk can be used to execute any functions or summaries 
+## Use this code chunk can be used to execute any functions or summaries
 ## that will not be included in your output such as correlations or 5 number summaries
-
 ```
 
 ## Analysis and Results
@@ -77,6 +87,21 @@ knitr::opts_chunk$set(echo = TRUE, highlight=FALSE, comment=NA, warnings=FALSE,m
 
 # This partition is optional, but can be useful for a simple way to resize your plots
 par(mfrow=c(2,3),pin=c(1,1),mar=c(7.1,4.1,3,1))
+
+#Quantitative - score differential
+boxplot(score_differential~dropback, data=RedZone)
+tapply(RedZone$score_differential,RedZone$dropback,summary)
+
+#Qualitative - personnel
+RedZone$personnel<-factor(RedZone$personnel)
+levels(RedZone$personnel)<-c("11_Light","12", "heavy")
+mosaicplot(dropback~personnel,data=RedZone)
+
+#Qualitative - down_group
+RedZone$down_group<-factor(RedZone$down_group)
+levels(RedZone$down_group)<-c("1st","2nd", "3rd_4th")
+mosaicplot(dropback~down_group,data=RedZone)
+
 ```
 
 \newpage
