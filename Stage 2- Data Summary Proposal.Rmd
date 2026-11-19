@@ -88,20 +88,66 @@ We will be studying 2025 NFL 4th Quarter Red Zone offenses by creating a logisti
 # This partition is optional, but can be useful for a simple way to resize your plots
 par(mfrow=c(2,3),pin=c(1,1),mar=c(7.1,4.1,3,1))
 
+#Quantitative - ydstogo
+boxplot(ydstogo~dropback, data=RedZone)
+tapply(RedZone$ydstogo,RedZone$dropback,summary)
+
 #Quantitative - score differential
 boxplot(score_differential~dropback, data=RedZone)
 tapply(RedZone$score_differential,RedZone$dropback,summary)
+
+#Quantitative - offense spread
+boxplot(offense_spread~dropback, data=RedZone)
+tapply(RedZone$offense_spread,RedZone$dropback,summary)
+
+#Quantitative - dropback success rate
+boxplot(dropback_sr~dropback, data=RedZone)
+tapply(RedZone$dropback_sr,RedZone$dropback,summary)
+
+#Quantitative - rush success rate
+boxplot(rush_sr~dropback, data=RedZone)
+tapply(RedZone$rush_sr,RedZone$dropback,summary)
 
 #Qualitative - personnel
 RedZone$personnel<-factor(RedZone$personnel)
 levels(RedZone$personnel)<-c("11_Light","12", "heavy")
 mosaicplot(dropback~personnel,data=RedZone)
+table(RedZone$personnel,RedZone$dropback)
+prop.table(table(RedZone$personnel,RedZone$dropback),margin=2)
 
 #Qualitative - down_group
 RedZone$down_group<-factor(RedZone$down_group)
 levels(RedZone$down_group)<-c("1st","2nd", "3rd_4th")
 mosaicplot(dropback~down_group,data=RedZone)
+table(RedZone$down_group,RedZone$dropback)
+prop.table(table(RedZone$down_group,RedZone$dropback),margin=2)
 
+#Qualitative - crunch_time
+RedZone$crunch_time<-factor(RedZone$crunch_time)
+mosaicplot(dropback~crunch_time,data=RedZone)
+table(RedZone$crunch_time,RedZone$dropback)
+prop.table(table(RedZone$crunch_time,RedZone$dropback),margin=2)
+
+#Binning
+RedZone$ydstogo_group <- cut(RedZone$ydstogo, breaks=c(0,3,6,9,Inf), labels=c("1-3 yds","4-6 yds","7-9 yds","10+ yds"))
+RedZone$lead_group <- cut(RedZone$score_differential, breaks=c(-Inf,-9,0,8,Inf), labels=c("Trailing 9+","Trailing 1-8 / Tied","Leading 1-8","Leading 9+"))
+table(RedZone$ydstogo_group)
+table(RedZone$lead_group)
+
+#Interaction - ydstogo and down_group
+interaction.plot(RedZone$down_group, RedZone$ydstogo_group, RedZone$dropback, fun=mean, trace.label="Yards to Go"
+                 , xlab="Down", ylab="Mean Dropback (Pass Rate)", main="Interaction Plot Yards to Go X Down")
+
+#Interaction - score_differential and crunch_time
+interaction.plot(RedZone$crunch_time, RedZone$lead_group, RedZone$dropback, fun=mean, trace.label="Lead"
+                 , xlab="Crunch Time", ylab="Mean Dropback (Pass Rate)", main="Interaction Plot Lead X Crunch Time")
+
+#Interaction - ydstogo and personnel
+interaction.plot(RedZone$ydstogo_group, RedZone$personnel, RedZone$dropback, fun=mean, trace.label="Personnel"
+                 , xlab="Yards to Go", ylab="Mean Dropback (Pass Rate)", main="Interaction Plot Personnel X Yards to Go")
+
+#Response variable - dropback
+barplot(table(RedZone$dropback), xlab="Play Type (0 = Run, 1 = Dropback)", ylab="Number of Plays", main="Distribution of Red Zone Play Calls")
 ```
 
 \newpage
