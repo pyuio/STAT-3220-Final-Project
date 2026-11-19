@@ -1,0 +1,144 @@
+---
+title: "99% Confidence, 1% Skill" 
+author: "Prathik, Noah, Rochi, Zile"
+fontsize: 12pt
+geometry: margin=1in
+urlcolor: black
+output: pdf_document
+header-includes:
+- \usepackage{setspace}
+- \onehalfspacing
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, highlight=FALSE, comment=NA, warnings=FALSE,message=FALSE)
+```
+
+```{r, echo=FALSE, warning=FALSE,results=FALSE}
+## Use this chunk for reading in packages.
+library(car)
+library(corrplot)
+library(Hmisc)
+library(olsrr)
+library(MASS)
+library(glmtoolbox)
+library(ggplot2)
+library(blorr)
+## Use this chunk for reading in the data, combining the data, and any other major data cleaning that is not relevant to show.
+RedZone <- read.csv("https://raw.githubusercontent.com/pyuio/STAT-3220-Final-Project/refs/heads/main/nfl_2025_redzone_q4.csv", header = T)
+names(RedZone)
+head(RedZone)
+## Remove the ## before all code.
+```
+
+\newpage
+
+## Introduction
+
+We will be studying 2025 NFL 4th Quarter Red Zone offenses by creating a logistic regression model that predicts the probability of the pass. This is a particularly interesting topic because the NFL has experienced recent change when it comes to Red Zone offensive success. According to Sports Info Solutions, Red Zone success rate hit a ten year low in 2024. This was primarily caused by a historically low Red Zone Passing success rate, as rushing success rates have remained mostly stable over the last ten years. We suspect that this trend may have changed play calling decisions during the 2025 season. Furthermore, in retrospect the NFL did indeed see general changes in play calling during the 2025 season. Teams shifted towards heavier sets (12+ personnel), with the Seahawks, the eventual Super Bowl Champions, and Rams, the NFC runners-up, leading the charge (ESPN). 13 personnel specifically experienced the most growth in 2025 (PFF). This is particularly interesting, however, as the actual efficiency, by EPA, of the formation did not increase from 2024 to 2025 (Sharp Football Analysis). These trends indicate the importance of personnel is predicting the pre-snap probability of the snap.Beyond this variable, we would expect score differential to play an incredibly important role, as leading teams would theoretically be more likely to run the ball in order to chew clock, regardless of where they are on the field. Finally, we would expect down to be a good predictor, as just generally teams pass the ball more on 3rd+ down as passing more often leads to chunk yardage that converts. This leads us to three research questions:
+
+1\. Is there a positive relationship between the probability of a pass and light personnel (11 light) usage? Similarly, is there a negative relationship between the probability of a pass and heavy personnel (12, Heavy) usage?
+
+2\. Is there a negative relationship between an offenses score differential and the probability of a pass?
+
+3\. Are later downs (3rd and 4th) associated with a greater probability of passing?
+
+## Data Summary
+
+### Metadata Description
+
+The NFLVerse is published data directly from the NFL. They collect all data on a down-to-down basis based directly on what happens during the play. Thus, because it is sourced directly from the league itself, there are almost no concerns with the quality or reliability of the data. However, we did manipulate the data slightly in order to make it fit for logistic regression. This was done for some of the qualitative variables in the data. Specifically, we created the "crunch_time" variable to denote plays that happen within the last five minutes of the game. For "personnel," we reduced the number of levels down to three. Although there are technically many different types of personnel, many are very similar in purpose, thus the three reduced levels focus on the most common personnel types and include the similar groupings in the same level.
+
+### EDA Summary
+
+```{r, echo=FALSE, warning=FALSE,results=FALSE}
+## Use this code chunk can be used to execute any functions or summaries
+## that will not be included in your output such as correlations or 5 number summaries
+```
+
+## Analysis and Results
+
+```{r, echo=FALSE, warning=FALSE,results=FALSE}
+## This code chunk can be used to execute any functions or summaries that will not be included in your output
+
+```
+
+## Conclusions
+
+\newpage
+
+## Appendix A: Data Dictionary
+
+| Variable Name | Abbreviated Name | Description |
+|:--:|:--:|:--:|
+| Drop Back | dropback | This is the response variable. It is a dummy variable where 1 denotes a drop back and 0 denotes a designed run. Therefore, if 1, it means the team tried to pass the ball, including sacks and scrambles. If 0, the team handed the ball off or used a designed Quarter Back run. |
+| Distance | ydstogo | This is a quantitative explanatory variable that tells us how far the offense has to go to either get a first down or score a touchdown if in a Down & Goal situation. |
+| Lead | score_differential | This is a quantitative variable that tells us how much the offense is leading the game by. It can be either positive of negative, where negative values denote the fact that the team is trailing. |
+| Drop Back Success | dropback_sr | This quantitative variable tells us the success rate of the offense on drop backs. A "success" in the NFL is defined as a play that increases the number of points the offense is expected to score on that drive. Therefore, this variable acts as a proxy for the teams general success on drop backs. |
+| Rush Success | rush_sr | This quantitative variable tells us the success rate of the offense on designed runs. A "success" in the NFL is defined as a play that increases the number of points the offense is expected to score on that drive. Therefore, this variable acts as a proxy for the teams general success on runs. |
+| Spread | offense_spread | This is a quantitative variable that tells us by how many points the offense was favored by going into the game. A negative value indicates that the offensive team was expected to lose the game. Therefore, this variable acts as a proxy for the relative strength of the offensive team. |
+| Crunch Time | crunch_time | This qualitative variable denotes if the play takes place within the last five minutes of the game. 1 means the play took place with under five minutes remaining, 0 means there was more than five minutes remaining. The reason we include this variable is because with less than five minutes remaining, the clock stops when the offense goes out of bounds. Therefore, we suppose strategy could change if there remains less than five minutes. |
+| Personnel | personnel | This qualitative variable tells the personnel the offense shows before the snap. In simple terms, personnel is the type of players the offense includes on the field. We are using three levels for this variable: 11_light (Base), 12, and heavy. 11_light means there is no more than one Tight End (TE) on the field. 12 Means there is two TEs. Heavy means there are three or more TEs. TEs are often used for run blocking, so we suppose that as we go from 11 to 12 to heavy, the probability of a drop back decreases. |
+| Down | down_group | This qualitative variable tells us which down the play took place on. There are three levels: 1st, 2nd, and 3rd/4th. We have decided to combine 3rd and 4th down because the objective on both downs is very similar as offenses are focused on getting the necessary yards to convert the down. |
+
+\newpage
+
+## Appendix B: Data Rows
+
+```{r, echo=FALSE}
+# Use head() function to output first several rows
+head(RedZone)
+```
+
+\newpage
+
+### Appendix C: Exploratory Data Analysis
+
+```{r, echo=FALSE}
+## Use this code  to include the relevant plots from EDA
+## This should NOT be a dump of all of your plots and outputs.
+## Refer to the Rmarkdown guide for sizing information on your plots
+
+# This partition is optional, but can be useful for a simple way to resize your plots
+par(mfrow=c(2,3),pin=c(1,1),mar=c(7.1,4.1,3,1))
+
+#Quantitative - score differential
+boxplot(score_differential~dropback, data=RedZone)
+tapply(RedZone$score_differential,RedZone$dropback,summary)
+
+#Qualitative - personnel
+RedZone$personnel<-factor(RedZone$personnel)
+levels(RedZone$personnel)<-c("11_Light","12", "heavy")
+mosaicplot(dropback~personnel,data=RedZone)
+
+#Qualitative - down_group
+RedZone$down_group<-factor(RedZone$down_group)
+levels(RedZone$down_group)<-c("1st","2nd", "3rd_4th")
+mosaicplot(dropback~down_group,data=RedZone)
+
+```
+
+\newpage
+
+## Appendix D: Final Model Output and Plots
+
+```{r, echo=FALSE, warning=FALSE,results=FALSE}
+## This code chunk can be used to execute any functions or summaries that will not be included in your output
+```
+
+```{r, echo=FALSE}
+## Use this section to output the summary of your final model
+## Include the relevant plots from assumptions and your additional techniques
+## This should NOT be a dump of all of your plots and outputs.
+## Refer to the Rmarkdown guide for sizing information on your plots
+```
+
+\newpage
+
+## Appendix E: References
+
+### Background References
+
+### Data Sources
+
+### Additional Help
