@@ -11,7 +11,7 @@ header-includes:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, highlight=FALSE, comment=NA, warnings=FALSE,message=FALSE)
+knitr::opts_chunk$set(echo = TRUE, highlight=FALSE, comment=NA, warning=FALSE,message=FALSE)
 ```
 
 ```{r, echo=FALSE, warning=FALSE,results=FALSE}
@@ -28,53 +28,82 @@ library(blorr)
 RedZone <- read.csv("https://raw.githubusercontent.com/pyuio/STAT-3220-Final-Project/refs/heads/main/nfl_2025_redzone_q4.csv", header = T)
 names(RedZone)
 head(RedZone)
+
 ## Remove the ## before all code.
+
+#Levels
+RedZone$personnel   <- factor(RedZone$personnel, levels = c("11_light","12","heavy"), labels = c("11_Light","12","heavy"))
+RedZone$down_group  <- factor(RedZone$down_group, levels = c("1st","2nd","3rd_4th"))
+RedZone$crunch_time <- factor(RedZone$crunch_time, levels = c(0,1))
+
+#Binning
+RedZone$ydstogo_group <- cut(RedZone$ydstogo, breaks=c(0,3,6,9,Inf), labels=c("1-3 yds","4-6 yds","7-9 yds","10+ yds"))
+RedZone$lead_group <- cut(RedZone$score_differential,breaks=c(-Inf,-9,0,8,Inf), labels=c("Trailing 9+","Trailing 1-8 / Tied","Leading 1-8","Leading 9+")) 
 ```
 
 \newpage
 
 ## Introduction
 
-We will be studying 2025 NFL 4th Quarter Red Zone offenses by creating a logistic regression model that predicts the probability of the pass. This is a particularly interesting topic because the NFL has experienced recent change when it comes to Red Zone offensive success. According to Sports Info Solutions, Red Zone success rate hit a ten year low in 2024. This was primarily caused by a historically low Red Zone Passing success rate, as rushing success rates have remained mostly stable over the last ten years. We suspect that this trend may have changed play calling decisions during the 2025 season. Furthermore, in retrospect the NFL did indeed see general changes in play calling during the 2025 season. Teams shifted towards heavier sets (12+ personnel), with the Seahawks, the eventual Super Bowl Champions, and Rams, the NFC runners-up, leading the charge (ESPN). 13 personnel specifically experienced the most growth in 2025 (PFF). This is particularly interesting, however, as the actual efficiency, by EPA, of the formation did not increase from 2024 to 2025 (Sharp Football Analysis). These trends indicate the importance of personnel is predicting the pre-snap probability of the snap.
+We will be studying 2025 NFL 4th Quarter Red Zone offenses by creating a logistic regression model that predicts the probability of a dropback by the quarter back or designated pass play. This is an interesting topic because the NFL has experienced recent change when it comes to Red Zone offensive success. According to Sports Info Solutions, Red Zone success rate hit a ten year low in 2024. This was mainly caused by a historically low Red Zone Passing success rate, as rushing success rates have remained mostly stable over the last ten years. We suspect that this trend may have influenced play calling decisions during the 2025 season. Furthermore, in review the NFL did indeed see general changes in play calling during the 2025 season. Teams shifted towards heavier sets (12+ personnel), with the Seahawks, the eventual Super Bowl Champions, and Rams, the NFC runners-up, being the leaders of this (ESPN). 13 personnel specifically experienced the most growth in 2025 (PFF). This is interesting as the actual efficiency (by EPA) of the formation did not increase from 2024 to 2025 (Sharp Football Analysis). These trends indicate the importance of personnel in predicting pre-snap probability of a dropback. Beyond this variable, we would expect score differential to play an incredibly important role, as leading teams would theoretically be more likely to run the ball in order to chew down the clock. Finally, we would expect the down to be a good predictor, as just generally teams pass the ball more on 3rd down and beyond as passing more often leads to chunk yardage that converts. This leads us to three research questions:
+
+1. Is there a positive relationship between the probability of a pass and light personnel (11 Light) usage? Similarly, is there a negative relationship between the probability of a pass and heavy personnel (12, Heavy) usage?
+
+2. Is there a negative relationship between an offenses score differential and the probability of a pass?
+
+3. Are later downs (3rd and 4th) associated with a greater probability of passing?
 
 ## Data Summary
 
-This section describes where our data came from and summarizes its key features. The data contain 150 fourth-quarter red zone plays from the 2025 NFL season, each labeled as a drop back or a designed run. We first describe how the data were collected and what we changed, then summarize the relationships between each predictor and the response using the plots in Appendix C, and finally assess multicollinearity and screen variables.
-
 ### Metadata Description
 
+The NFLVerse is published data directly sourced and compiled from the NFL. They collect all data on a down-to-down basis based directly on what happens during the play. Thus, as it is sourced directly from the NFL itself, there are next to no concerns with the quality or reliability of the data. However, we slightly manipulated the data in order to make it fit for logistic regression. This was done for some of the qualitative variables in the data. Specifically, we created the "crunch_time" variable to denote plays that happen within the last five minutes of the game. For "personnel," we reduced the number of levels down to three as there are technically many different types of personnel, but many are very similar in purpose, thus the three reduced levels focus on the most common personnel types and include the similar groupings in the same level.
+
 ### EDA Summary
+The response variable dropback is binary, so logistic regression is appropriate. Of the 150 plays, 76 (50.7%) were drop backs and 74 (49.3%) were designed runs, so they are nearly perfectly balanced. The model will have 10 coefficients (5 quantitative predictors, 2 for personnel, 2 for down_group, and 1 for crunch_time). That gives about 7.4 events per predictor (74/10), so we will be cautious about overfitting and look into dropping weaker predictors throughout screening. Plays from the same team and game may not be completely independent, which we will treat as a limitation. Although it is likely not common for many instances of plays from the same team and game to occur as the data is randomized from the entirety of the 2025 season.
 
-The response, dropback, is binary, so logistic regression is appropriate. Of the 150 plays, 76 (50.7%) were drop backs and 74 (49.3%) were designed runs (Appendix C, response bar plot), so the classes are nearly perfectly balanced. The model will have 10 coefficients (5 quantitative predictors, 2 for personnel, 2 for down_group, and 1 for crunch_time). That gives about 7.4 events per predictor (74/10), so we will be cautious about overfitting and consider dropping weak predictors during screening. Plays from the same team and game may not be fully independent, which we treat as a limitation.
+Personnel shows the clearest relationship with the response. The drop back rate was 59.3% (54 of 91) for 11_Light, 39.4% (13 of 33) for 12, and 34.6% (9 of 26) for heavy. The drop back rate falls as tight ends are added, as we expected. 11_Light makes up 60.7% of plays, while heavy has only 26 plays, so its estimate will be not as precise.
 
-Personnel shows the clearest relationship with the response. The drop back rate was 59.3% (54 of 91) for 11_Light, 39.4% (13 of 33) for 12, and 34.6% (9 of 26) for heavy (Appendix C, personnel mosaic plot). The drop back rate falls as tight ends are added, as we expected. 11_Light makes up 60.7% of plays, while heavy has only 26 plays, so its estimate will be less precise.
+Offenses that dropped back were typically trailing, while offenses that ran were typically in a tie or ahead. The mean lead was -6.59 points on drop backs (median -10, IQR -17 to 7) versus +0.77 on runs (median 0, IQR -6.75 to 7.75). This supports a negative relationship between the lead and drop back probability. The sample is split between 55 plays trailing by 9+, 39 trailing by 1 to 8 or tied, 24 leading by 1 to 8, and 32 leading by 9+. The offense spread shows a similar but weaker pattern, with mean spread of -0.38 on drop backs versus +1.41 on runs, so underdogs passed more by a small margin.
 
-Offenses that dropped back were typically trailing, while offenses that ran were typically even or ahead. The mean lead was -6.59 points on drop backs (median -10, IQR -17 to 7) versus +0.77 on runs (median 0, IQR -6.75 to 7.75) (Appendix C, boxplot). This supports a negative relationship between lead and drop back probability. The sample is split between 55 plays trailing by 9+, 39 trailing by 1 to 8 or tied, 24 leading by 1 to 8, and 32 leading by 9+. Offense spread shows a similar but weaker pattern, with mean spread of -0.38 on drop backs versus +1.41 on runs, so underdogs passed somewhat more.
+The drop back rate was 48.3% on 1st down (29 of 60), 42.0% on 2nd (21 of 50), and 65.0% on 3rd/4th (26 of 40). Later downs are associated with more passing, although 2nd down is not higher than 1st. Distance moves in the same direction: mean ydstogo was 7.18 on drop backs versus 6.55 on runs (medians 8 and 6.5). The first quartile differs the most (4.75 vs 3), which is consistent with short-yardage runs.
 
-The drop back rate was 48.3% on 1st down (29 of 60), 42.0% on 2nd (21 of 50), and 65.0% on 3rd/4th (26 of 40) (Appendix C, down mosaic plot). Later downs are associated with more passing, but 2nd down is not higher than 1st. Distance moves in the same direction: mean ydstogo was 7.18 on drop backs versus 6.55 on runs (medians 8 and 6.5). The first quartile differs most (4.75 vs 3), consistent with short-yardage runs.
+crunch_time shows no marginal relationship, with drop back rates of 50.5% (46 of 91) outside crunch time and 50.8% (30 of 59) inside it. The team success-rate variables separate the classes only slightly. Mean dropback_sr was 45.35 on drop backs versus 46.58 on runs, and mean rush_sr was 41.99 versus 42.64. These likely carry little indication, and they are probably the best candidates to drop in screening.
 
-crunch_time shows no marginal relationship, with drop back rates of 50.5% (46 of 91) outside crunch time and 50.8% (30 of 59) inside it. The team success-rate variables separate the classes only slightly. Mean dropback_sr was 45.35 on drop backs versus 46.58 on runs, and mean rush_sr was 41.99 versus 42.64. These likely carry little signal, and they are the best candidates to drop in screening.
+Just for the interaction plots, we binned distance into 4 distinct groups (1-3, 4-6, 7-9, and 10+ yards) and did the same for lead (trailing by 9+, trailing by 1-8 or tied, leading by 1-8, and leading by 9+). We did this so that each line would represent enough plays to read, but both variables will stay quantitative for the model.
 
-Two of the three interaction plots show clearly non-parallel lines (though cell sizes are small, see below):
-- Lead × crunch time: The effect of crunch time depends on the lead, even though crunch time has no marginal effect. Offenses leading by 9+ dropped back about 35% of the time before crunch time but only about 13% during it (clock-killing runs). Offenses trailing by 9+ went the other way, from about 72% to 82%. The lines cross, which supports including this term.
-- Distance × down: On 2nd down, drop back rate climbs steeply with distance (about 20% at 1 to 3 yards to over 70% at 10+). On 3rd/4th down, it is highest at 7 to 9 yards (about 88%), and the 10+ yard group drops to about 60%.
-- Personnel × distance: 11_Light is relatively flat across distance, while 12 rises with distance. The heavy line is jagged because each distance bin holds only a handful of plays, so we don’t read much into it.
+Two of the three interaction plots show clearly non-parallel lines:
 
-We assessed multicollinearity using variance inflation factors from the full model. All adjusted GVIF values were between 1.04 and 1.36, well below the  cutoff. The strongest pairwise relationship was between score differential and offense spread (r ≈ 0.62), which is expected since favored teams tend to lead, but it did not inflate the variances enough to be a concern. Therefore, no variables were removed due to multicollinearity.
+- Lead × crunch time: The effect of crunch time depends on the lead, even though crunch time has no marginal effect. Offenses leading by 1-8 dropped back about 35% of the time before crunch time but only about 14% during it (clock eating runs). Offenses trailing by 9+ went the other way (from about 72% to 82%). The lines cross which supports including this term for the model.
+- Distance × down: On 2nd down, the drop back rate climbs steeply with distance (about 20% at 1 to 3 yards to over 70% at 10+). On 3rd/4th down, it is highest at 7 to 9 yards (about 88%), and the 10+ yard group drops to about 60%.
+- Personnel × distance: 11_Light is pretty flat across distance, while 12 rises with distance. The heavy line is jagged because each distance bin holds only a handful of plays.
 
-From the iterative process, game situation, especially score differential, is the strongest predictor of whether a red zone offense dropped back in the fourth quarter of the 2025 season. Offenses that were trailing passed significantly more, while later downs and lighter personnel were associated with more passing in the expected direction, but these effects were not statistically conclusive with 150 plays.
+We assessed multicollinearity using variance inflation factors from the full model. All adjusted GVIF values were between 1.04 and 1.36, well below the cutoff of sqrt(10) which is around 3.16. The strongest pairwise relationship was between score differential and offense spread (r is approximately 0.61), which is expected since favored teams tend to lead and win, however it did not inflate the variances enough to be of concern. Therefore, no variables were removed due to multicollinearity.
 
 ```{r, echo=FALSE, warning=FALSE,results=FALSE}
 ## Use this code chunk can be used to execute any functions or summaries
 ## that will not be included in your output such as correlations or 5 number summaries
 
+tapply(RedZone$ydstogo, RedZone$dropback, summary)
+tapply(RedZone$score_differential, RedZone$dropback, summary)
+tapply(RedZone$offense_spread, RedZone$dropback, summary)
+tapply(RedZone$dropback_sr, RedZone$dropback, summary)
+tapply(RedZone$rush_sr, RedZone$dropback, summary)
+
+prop.table(table(RedZone$personnel, RedZone$dropback), margin=1)
+table(RedZone$personnel,RedZone$dropback)
+
+prop.table(table(RedZone$down_group, RedZone$dropback), margin=1)
+table(RedZone$down_group,RedZone$dropback)
+
+prop.table(table(RedZone$crunch_time, RedZone$dropback), margin=1)
+table(RedZone$crunch_time,RedZone$dropback)
+
+table(RedZone$ydstogo_group)
+table(RedZone$lead_group)
+
 # Full model
-model <- glm(
-  dropback ~ ydstogo + score_differential + dropback_sr + rush_sr +
-    offense_spread + crunch_time + personnel + down_group,
-  data = RedZone,
-  family = binomial
-)
+model <- glm(dropback ~ ydstogo + score_differential + dropback_sr + rush_sr + offense_spread + crunch_time + personnel + down_group, data = RedZone, family = binomial)
 
 # Calculate VIF
 vif(model)
@@ -89,7 +118,6 @@ step(model, direction = "backward")
 
 ```
 
-
 ## Conclusions
 
 \newpage
@@ -97,9 +125,16 @@ step(model, direction = "backward")
 ## Appendix A: Data Dictionary
 
 | Variable Name | Abbreviated Name | Description |
-|:-------------:|:----------------:|:-----------:|
-|Variable 1|Var1|This is the first variable.|
-|Variable 2|Var2|This is the second variable.|
+|:--:|:--:|:--:|
+| Drop Back | dropback | This is the response variable. It is a dummy variable where 1 denotes a drop back and 0 denotes a designed run. Therefore, if 1 it means the team tried to pass the ball, also including sacks and scrambles. If 0, the team handed the ball off or used a designed quarterback run. |
+| Distance | ydstogo | This is a quantitative explanatory variable that tells us how far the offense has to go to either get a first down or score a touchdown (if in a Down & Goal situation). |
+| Lead | score_differential | This is a quantitative variable that tells us how much the offense is leading the game by. It can be either positive or negative, where negative values denote the fact that the team is trailing. |
+| Drop Back Success | dropback_sr | This quantitative variable tells us the success rate of the offense on drop backs. A "success" in the NFL is defined as a play that increases the number of points the offense is expected to score on that drive. Therefore, this variable acts as an indicator for the teams general success on drop backs. |
+| Rush Success | rush_sr | This quantitative variable tells us the success rate of the offense on designed runs. A "success" in the NFL is defined as a play that increases the number of points the offense is expected to score on that drive. Therefore, this variable acts as an indicator for the teams general success on runs. |
+| Spread | offense_spread | This is a quantitative variable that tells us by how many points the offense was favored by going into the game. A negative value indicates that the offensive team was expected to lose the game. Therefore, this variable acts as a proxy for the relative strength of the offensive team. |
+| Crunch Time | crunch_time | This qualitative variable denotes if the play takes place within the last five minutes of the game. 1 means the play took place with under five minutes remaining, 0 means there was more than five minutes remaining. The reason we include this variable is because with less than five minutes remaining, the clock stops when the offense goes out of bounds. Therefore, we believe strategy could change if there remains less than five minutes. |
+| Personnel | personnel | This qualitative variable tells the personnel the offense shows before the snap. In simple terms, personnel is the type of players the offense includes on the field. We are using three levels for this variable: 11_Light (Base), 12, and heavy. 11_Light means there is no more than one Tight End (TE) on the field. 12 Means there is two TEs. Heavy means there are three or more TEs. TEs are often used for run blocking, so we suppose that as we go from 11 to 12 to heavy, the probability of a drop back decreases. |
+| Down | down_group | This qualitative variable tells us which down the play took place on. There are three levels: 1st, 2nd, and 3rd/4th. We have decided to combine 3rd and 4th down because the objective on both downs is very similar as offenses are focused on getting the necessary yards to convert the down. |
 
 \newpage
 
@@ -107,12 +142,12 @@ step(model, direction = "backward")
 
 ```{r, echo=FALSE}
 # Use head() function to output first several rows
-
+head(RedZone)
 ```
 
 \newpage
 
-### Appendix C: Exploratory Data Analysis
+## Appendix C: Exploratory Data Analysis
 
 ```{r, echo=FALSE}
 ## Use this code  to include the relevant plots from EDA
@@ -124,64 +159,40 @@ par(mfrow=c(2,3),pin=c(1,1),mar=c(7.1,4.1,3,1))
 
 #Quantitative - ydstogo
 boxplot(ydstogo~dropback, data=RedZone)
-tapply(RedZone$ydstogo,RedZone$dropback,summary)
 
 #Quantitative - score differential
 boxplot(score_differential~dropback, data=RedZone)
-tapply(RedZone$score_differential,RedZone$dropback,summary)
 
 #Quantitative - offense spread
 boxplot(offense_spread~dropback, data=RedZone)
-tapply(RedZone$offense_spread,RedZone$dropback,summary)
 
 #Quantitative - dropback success rate
 boxplot(dropback_sr~dropback, data=RedZone)
-tapply(RedZone$dropback_sr,RedZone$dropback,summary)
 
 #Quantitative - rush success rate
 boxplot(rush_sr~dropback, data=RedZone)
-tapply(RedZone$rush_sr,RedZone$dropback,summary)
 
 #Qualitative - personnel
-RedZone$personnel<-factor(RedZone$personnel)
-levels(RedZone$personnel)<-c("11_Light","12", "heavy")
 mosaicplot(dropback~personnel,data=RedZone)
-table(RedZone$personnel,RedZone$dropback)
-prop.table(table(RedZone$personnel,RedZone$dropback),margin=2)
 
 #Qualitative - down_group
-RedZone$down_group<-factor(RedZone$down_group)
-levels(RedZone$down_group)<-c("1st","2nd", "3rd_4th")
 mosaicplot(dropback~down_group,data=RedZone)
-table(RedZone$down_group,RedZone$dropback)
-prop.table(table(RedZone$down_group,RedZone$dropback),margin=2)
 
 #Qualitative - crunch_time
-RedZone$crunch_time<-factor(RedZone$crunch_time)
 mosaicplot(dropback~crunch_time,data=RedZone)
-table(RedZone$crunch_time,RedZone$dropback)
-prop.table(table(RedZone$crunch_time,RedZone$dropback),margin=2)
-
-#Binning
-RedZone$ydstogo_group <- cut(RedZone$ydstogo, breaks=c(0,3,6,9,Inf), labels=c("1-3 yds","4-6 yds","7-9 yds","10+ yds"))
-RedZone$lead_group <- cut(RedZone$score_differential, breaks=c(-Inf,-9,0,8,Inf), labels=c("Trailing 9+","Trailing 1-8 / Tied","Leading 1-8","Leading 9+"))
-table(RedZone$ydstogo_group)
-table(RedZone$lead_group)
 
 #Interaction - ydstogo and down_group
-interaction.plot(RedZone$down_group, RedZone$ydstogo_group, RedZone$dropback, fun=mean, trace.label="Yards to Go"
-                 , xlab="Down", ylab="Mean Dropback (Pass Rate)", main="Interaction Plot Yards to Go X Down")
+interaction.plot(RedZone$down_group, RedZone$ydstogo_group, RedZone$dropback, fun=mean, trace.label="Yards to Go", xlab="Down", ylab="Mean Dropback (Pass Rate)", main="Interaction Plot Yards to Go X Down")
 
 #Interaction - score_differential and crunch_time
-interaction.plot(RedZone$crunch_time, RedZone$lead_group, RedZone$dropback, fun=mean, trace.label="Lead"
-                 , xlab="Crunch Time", ylab="Mean Dropback (Pass Rate)", main="Interaction Plot Lead X Crunch Time")
+interaction.plot(RedZone$crunch_time, RedZone$lead_group, RedZone$dropback, fun=mean, trace.label="Lead", xlab="Crunch Time", ylab="Mean Dropback (Pass Rate)", main="Interaction Plot Lead X Crunch Time")
 
 #Interaction - ydstogo and personnel
-interaction.plot(RedZone$ydstogo_group, RedZone$personnel, RedZone$dropback, fun=mean, trace.label="Personnel"
-                 , xlab="Yards to Go", ylab="Mean Dropback (Pass Rate)", main="Interaction Plot Personnel X Yards to Go")
+interaction.plot(RedZone$ydstogo_group, RedZone$personnel, RedZone$dropback, fun=mean, trace.label="Personnel",xlab="Yards to Go",ylab="Mean Dropback (Pass Rate)",main="Interaction Plot Personnel X Yards to Go")
 
 #Response variable - dropback
 barplot(table(RedZone$dropback), xlab="Play Type (0 = Run, 1 = Dropback)", ylab="Number of Plays", main="Distribution of Red Zone Play Calls")
+
 ```
 
 \newpage
@@ -205,6 +216,19 @@ barplot(table(RedZone$dropback), xlab="Play Type (0 = Run, 1 = Dropback)", ylab=
 
 ### Background References
 
+Barnwell, B. (2026, May 13). *Can more NFL teams copy the Rams' TE-heavy offense in 2026?* ESPN. <https://www.espn.com/nfl/story/_/id/48750958/2026-nfl-tight-ends-13-personnel-rams-mcvay-trends-draft-jumbo-barnwell>
+
+Bodiford, N. (2026, May 27). *NFL personnel trends: How heavier groupings are shrinking the fantasy flex pool*. PFF. <https://www.pff.com/news/fantasy-football-nfl-personnel-trends-how-heavier-groupings-are-shrinking-the-fantasy-flex-pool>
+
+Sharp Football Analysis. (2026, November 17). *NFL offensive personnel usage, all 32 teams* [Interactive table]. Retrieved November 20, 2026, from <https://www.sharpfootballanalysis.com/stats-nfl/nfl-offensive-personnel/>
+
+Weaver, J. (2024, September 26). *Study: What's going on with red zone offense?* Sports Info Solutions. <https://www.sportsinfosolutions.com/2024/09/26/study-whats-going-on-with-red-zone-offense/>
+
 ### Data Sources
 
+Baldwin, B., & Carl, S. (n.d.). *RBSDM stats* [Interactive dashboard]. Retrieved November 20, 2026, from <https://rbsdm.com>
+
+nflverse. (n.d.). *NFL play-by-play data* [Data set]. GitHub. Retrieved November 20, 2026, from <https://github.com/nflverse/nflverse-data/releases/tag/pbp>
+
 ### Additional Help
+We utilized Visual Studio Code and Python to help us combine csv files and scan through our data.
